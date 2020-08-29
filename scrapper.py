@@ -3,42 +3,78 @@ import requests
 from bs4 import BeautifulSoup
 
 os.system("clear")
+
+
 url = "https://www.iban.com/currency-codes"
 
-def a_country(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+
+countries = []
+
+request = requests.get(url)
+soup = BeautifulSoup(request.text, "html.parser")
+
+table = soup.find("table")
+rows = table.find_all("tr")[1:]
+
+for row in rows:
+  items = row.find_all("td")
+  name = items[0].text
+  code =items[2].text
+  if name and code:
+    if name != "No universal currency":
+      country = {
+        'name':name.capitalize(),
+        'code': code
+      }
+      countries.append(country)
 
 
-def main():
-  result = requests.get(url)
-  soup = BeautifulSoup(result.text, "html.parser")
-  get_info = soup.find("tbody").find_all("td")
-  country_info =[]
-  for i in get_info:
-    country_info.append(i.string)
-  country_name = country_info[::4]
-  print("Hello! Please choose a country by number")
-  for x, y in enumerate(country_name, start=1):
-    print(x, y)
-  each_country = list(a_country(country_info, 4))
-  matter(each_country)
-
-
-def matter(each_country):
-  answer = input("#:")
-  x = range(1, 268)
+def ask():
   try:
-    answer = int(answer)
-    if answer in x:
-      print("You chose " + each_country[answer][0] + "\n" "The currency code is " + each_country[answer][2])
-      return
+    choice = int(input("\nWhere are you from? Choose a country by number.\n#: "))
+    if choice > len(countries):
+      print("Choose a number from the list.")
+      ask()
     else:
-      print("chose a number from the list")
-      matter(each_country)
-  except:
-    answer = answer
+      country = countries[choice]
+      print(f"{country['name']}")
+      ask2(country)
+  except  ValueError:
     print("That wasn't a number.")
-    matter(each_country)
+    ask()
 
-main()
+
+def ask2(country):
+  try:
+    choice2 = int(input("\nChoose another country.\n#: "))
+    if choice2 > len(countries):
+      print("Choose a number from the list.")
+      ask2(country)
+    else:
+      country2 = countries[choice2]
+      print(f"{country2['name']} \n\nHow much {country['code']} do you want to convert to {country2['code']}?")
+      ask3(country, country2)
+  except ValueError:
+    print("That wasn't a number.")
+    ask2(country)
+
+  
+def ask3(country, country2):
+  choice3 = input()
+  URL = f"https://transferwise.com/gb/currency-converter/{country['code']}-to-{country2['code']}-rate?amount={choice3}"
+  request2 = requests.get(URL)
+  if request2.status_code == 200:      
+    soup2 = BeautifulSoup(request2.text, "html.parser")
+    text = soup2.find("div", {"class":"col-lg-6 text-xs-center text-lg-left"})
+    span = text.find("span", {"class":"text-success"}).string
+    print(f"{country['code']}{choice3} is {country2['code']}{float(span)*float(choice3)}")
+  else:
+    print("That's not a number.")
+    ask3(country, country2)
+
+
+print("Welcome to CurrencyConvert PRO 2000\n")
+for index, country in enumerate(countries):
+  print(f"#{index} {country['name']}")
+
+ask()
